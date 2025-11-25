@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lab 8 – Secure Signup (Karthik)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ====== Base Reset ====== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: radial-gradient(circle at top, #1e293b 0, #000 100%);
+  color: #e5e7eb;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.wrapper {
+  max-width: 900px;
+  margin: auto;
+}
+
+/* Layout */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+@media(max-width:800px){
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Panel */
+.panel {
+  background: rgba(255,255,255,0.08);
+  padding: 20px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+/* Form styling */
+label {
+  display: block;
+  margin-top: 10px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+
+button {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 48%;
+}
+
+.btn-primary {
+  background: #38bdf8;
+  color: black;
+}
+
+.btn-secondary {
+  background: #444;
+  color: white;
+}
+
+.error {
+  color: #ffb3b3;
+  font-size: 0.8rem;
+}
+
+/* Preview */
+#previewBox {
+  background: rgba(0,0,0,0.3);
+  padding: 15px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  margin-top: 10px;
+}
+
+/* Footer */
+footer {
+  text-align:center;
+  margin-top:20px;
+  font-size:0.9rem;
+  color:#9ca3af;
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <h1>Lab 8 – Secure Signup Form</h1>
+  <p>Client-side validation and basic XSS protection.</p>
+
+  <div class="main-layout">
+
+    <!-- FORM PANEL -->
+    <section class="panel">
+      <h2>Register</h2>
+      <form id="registrationForm" novalidate>
+        <label>First Name</label>
+        <input type="text" id="firstName">
+        <span class="error" id="firstNameError"></span>
+
+        <label>Last Name</label>
+        <input type="text" id="lastName">
+        <span class="error" id="lastNameError"></span>
+
+        <label>Email ID</label>
+        <input type="email" id="email">
+        <span class="error" id="emailError"></span>
+
+        <label>Password</label>
+        <input type="password" id="password">
+        <span class="error" id="passwordError"></span>
+
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword">
+        <span class="error" id="confirmPasswordError"></span>
+
+        <div style="display:flex; justify-content:space-between; margin-top:15px;">
+          <button type="submit" class="btn-primary">Create Account</button>
+          <button type="reset" class="btn-secondary">Clear</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- PREVIEW PANEL -->
+    <section class="panel">
+      <h2>Safe Preview (XSS Protected)</h2>
+      <p>If valid, a safe summary will appear below.</p>
+
+      <pre id="previewBox">
+Fill out the form and click Create Account to see preview.
+      </pre>
+
+      <h3>Security Notes:</h3>
+      <ul>
+        <li>All fields required</li>
+        <li>Email format enforced</li>
+        <li>Passwords must match</li>
+        <li>Dangerous characters removed</li>
+        <li>Output uses textContent (no HTML execution)</li>
+      </ul>
+    </section>
+
+  </div>
+</div>
+
+<footer>
+  ITC 505 – Lab 8 · Prepared by Karthikeya
+  <br>
+  Last updated: <span id="lastModified"></span>
+</footer>
+
+<script>
+// Trim
+function trim(v){ return v ? v.trim() : ""; }
+
+// Email pattern
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Clear errors
+function clearErrors(){
+  document.querySelectorAll(".error").forEach(e => e.textContent = "");
+}
+
+document.getElementById("registrationForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  clearErrors();
+
+  let firstName = trim(document.getElementById("firstName").value);
+  let lastName = trim(document.getElementById("lastName").value);
+  let email = trim(document.getElementById("email").value);
+  let password = document.getElementById("password").value;
+  let confirmPassword = document.getElementById("confirmPassword").value;
+
+  let error = false;
+
+  if(!firstName){ document.getElementById("firstNameError").textContent="Required"; error=true; }
+  if(!lastName){ document.getElementById("lastNameError").textContent="Required"; error=true; }
+  if(!email){ document.getElementById("emailError").textContent="Required"; error=true; }
+  if(!password){ document.getElementById("passwordError").textContent="Required"; error=true; }
+  if(!confirmPassword){ document.getElementById("confirmPasswordError").textContent="Required"; error=true; }
+
+  if(error){ return; }
+
+  if(!emailRegex.test(email)){
+    document.getElementById("emailError").textContent="Invalid email";
+    return;
+  }
+
+  if(password !== confirmPassword){
+    document.getElementById("confirmPasswordError").textContent="Passwords do not match";
+    return;
+  }
+
+  firstName = firstName.replace(/[<>;"']/g,"");
+  lastName = lastName.replace(/[<>;"']/g,"");
+  email = email.replace(/[<>;"']/g,"");
+
+  const preview =
+`Registration Successful!
+------------------------
+Name: ${firstName} ${lastName}
+Email: ${email}
+Password: [HIDDEN]`;
+
+  document.getElementById("previewBox").textContent = preview;
+});
+
+// Last updated footer
+var x = document.lastModified;
+document.getElementById('lastModified').textContent = x;
+</script>
+
+</body>
+</html>
