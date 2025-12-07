@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lights Out – Retro Edition</title>
+
+    <!-- Retro arcade font (font-craziness required for assignment) -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===== GLOBAL ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #111827, #020617);
+            color: #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: "Press Start 2P", sans-serif;
+        }
+
+        /* ===== HEADER ===== */
+        h1 {
+            font-size: 1.4rem;
+            text-align: center;
+            margin-bottom: 14px;
+            color: #f9fafb;
+            text-shadow: 0 0 6px #22c55e, 0 0 14px #22c55e;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.6rem;
+            line-height: 1.5;
+            color: #a5b4fc;
+            max-width: 500px;
+            margin-bottom: 10px;
+        }
+
+        /* ===== GAME WRAPPER ===== */
+        #game-wrapper {
+            margin-top: 30px;
+            padding: 18px 20px 26px;
+            border-radius: 14px;
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(15, 23, 42, 0.95),
+                rgba(15, 23, 42, 0.95) 2px,
+                rgba(15, 23, 42, 0.9) 3px
+            );
+        }
+
+        /* ===== BOARD ===== */
+        #board {
+            margin: 0 auto 16px;
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-auto-rows: 60px;
+            gap: 6px;
+        }
+
+        .tile {
+            border-radius: 6px;
+            border: 2px solid #16a34a;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+        }
+
+        .tile.on {
+            background: radial-gradient(circle, #bbf7d0 0%, #22c55e 45%, #166534 100%);
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+        }
+
+        .tile.off {
+            background: #020617;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.9);
+        }
+
+        .tile:hover {
+            transform: translateY(-1px) scale(1.03);
+        }
+
+        /* ===== BUTTONS ===== */
+        .controls {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        #newGameBtn {
+            padding: 9px 20px;
+            border-radius: 999px;
+            border: 2px solid #f97316;
+            background: linear-gradient(135deg, #facc15, #f97316);
+            color: #111827;
+            font-size: 0.7rem;
+            cursor: pointer;
+            box-shadow: 0 0 16px rgba(249, 115, 22, 0.7);
+            text-transform: uppercase;
+        }
+
+        #newGameBtn:hover {
+            transform: translateY(-1px) scale(1.05);
+            filter: brightness(1.05);
+        }
+
+        #statusText {
+            margin-top: 6px;
+            text-align: center;
+            font-size: 0.55rem;
+            color: #fbbf24;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            margin-top: 26px;
+            font-size: 0.55rem;
+            color: #9ca3af;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>LIGHTS OUT</h1>
+
+    <p class="subtitle">
+        Click a tile to toggle it and its neighbors.<br>
+        <strong>Your goal is to turn EVERY light OFF and leave the entire grid completely dark!</strong><br>
+        Each puzzle is randomly generated and guaranteed solvable.
+    </p>
+
+    <div id="game-wrapper">
+        <div id="board" aria-label="Lights Out Board"></div>
+
+        <div class="controls">
+            <button id="newGameBtn">NEW PUZZLE</button>
+        </div>
+
+        <p id="statusText"></p>
+    </div>
+
+    <!-- GAME SCRIPT -->
+    <script>
+        const SIZE = 5;
+        let lights = []; // true = ON (green), false = OFF (dark)
+
+        const boardElement = document.getElementById("board");
+        const newGameBtn = document.getElementById("newGameBtn");
+        const statusText = document.getElementById("statusText");
+
+        // Start with all lights OFF (winning state)
+        function initBoard() {
+            lights = [];
+            for (let r = 0; r < SIZE; r++) {
+                let row = [];
+                for (let c = 0; c < SIZE; c++) {
+                    row.push(false);
+                }
+                lights.push(row);
+            }
+            renderBoard();
+        }
+
+        // Build the board visuals
+        function renderBoard() {
+            boardElement.innerHTML = "";
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const tile = document.createElement("div");
+                    tile.classList.add("tile", lights[r][c] ? "on" : "off");
+                    tile.dataset.row = r;
+                    tile.dataset.col = c;
+                    tile.addEventListener("click", handleTileClick);
+                    boardElement.appendChild(tile);
+                }
+            }
+        }
+
+        // Toggle a single tile
+        function toggleCell(r, c) {
+            if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return;
+            lights[r][c] = !lights[r][c];
+        }
+
+        // Press logic: tile + neighbors
+        function press(r, c) {
+            toggleCell(r, c);
+            toggleCell(r - 1, c);
+            toggleCell(r + 1, c);
+            toggleCell(r, c - 1);
+            toggleCell(r, c + 1);
+        }
+
+        function handleTileClick(e) {
+            const r = Number(e.target.dataset.row);
+            const c = Number(e.target.dataset.col);
+            press(r, c);
+            renderBoard();
+            checkWin();
+        }
+
+        // WIN: ALL lights must be OFF
+        function checkWin() {
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (lights[r][c]) {
+                        statusText.textContent = "";
+                        return;
+                    }
+                }
+            }
+            statusText.textContent = "ALL LIGHTS OUT — YOU WIN!";
+            window.alert("You win!");
+        }
+
+        // Random solvable puzzle: simulate random valid presses
+        function scrambleBoard(presses = 20) {
+            for (let i = 0; i < presses; i++) {
+                const r = Math.floor(Math.random() * SIZE);
+                const c = Math.floor(Math.random() * SIZE);
+                press(r, c);
+            }
+        }
+
+        function newPuzzle() {
+            initBoard();
+            scrambleBoard(25);
+            renderBoard();
+            statusText.textContent = "Puzzle ready — turn all lights OFF!";
+        }
+
+        newGameBtn.addEventListener("click", newPuzzle);
+
+        // On first load
+        initBoard();
+        scrambleBoard(25);
+        renderBoard();
+    </script>
+
+    <!-- REQUIRED FOOTER -->
+    <footer>
+        <p>Last updated:
+            <span id="lastModified"></span>
+        </p>
+    </footer>
+
+    <script>
+        document.getElementById("lastModified").textContent = document.lastModified;
+    </script>
+</body>
+</html>
